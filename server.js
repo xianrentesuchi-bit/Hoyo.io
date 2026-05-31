@@ -4,25 +4,40 @@ const path = require('path');
 const app = express();
 const router = express.Router();
 
-router.get('/:file(*)?', async (req, res) => {
-    // リクエストされたファイル名を取得（空ならindex.html）
+// 各ゲームのGitHub上のベースURLのマッピング
+const gameUrls = {
+    'yohoho-io': 'https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/yohoho-io',
+    'poly-track': 'https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/poly-track',
+    'subway-hawaii': 'https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/hawaii'
+};
+
+// メニュー画面（ルート）へのアクセスは、ローカルのpublic/index.htmlを返す
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ゲームごとのリクエストを処理するルーティング
+router.get('/:game/:file(*)?', async (req, res) => {
+    const game = req.params.game;
     const fileName = req.params.file || 'index.html';
     
-    // GitHubのRawデータURLを構築
-    const targetUrl = `https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/yohoho-io/${fileName}`;
+    // 定義されていないゲーム名の場合は404
+    if (!gameUrls[game]) {
+        res.status(404).send('Game not found');
+        return;
+    }
+
+    // 選択されたゲームに応じたURLを構築
+    const targetUrl = `${gameUrls[game]}/${fileName}`;
 
     try {
         await stream(targetUrl, {
             method: 'GET',
             maxRedirections: 3,
         }, ({ statusCode, headers }) => {
-            // 200 OK 以外は404エラーとして返す
             if (statusCode !== 200) {
                 res.status(statusCode).send('Resource not found');
                 return;
             }
 
-            // 拡張子からContentTypeを判定（元のコードの仕様を維持しつつ補強）
             let contentType = headers['content-type'];
             if (fileName === 'index.html' || fileName.endsWith('index.html')) {
                 contentType = 'text/html';
@@ -34,7 +49,6 @@ router.get('/:file(*)?', async (req, res) => {
                 contentType = 'text/css';
             }
 
-            // ヘッダーの設定
             if (contentType) {
                 res.setHeader('Content-Type', contentType);
             }
@@ -50,10 +64,8 @@ router.get('/:file(*)?', async (req, res) => {
     }
 });
 
-// 作成したルーターを適用
-app.use('/', router);
+app.use('/games', router);
 
-// サーバーをポート3000で起動
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
