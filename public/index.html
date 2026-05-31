@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yohoho.io Game</title>
+    <title>Game Arcade</title>
     <style>
         body, html {
             margin: 0;
@@ -11,16 +11,76 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #000;
+            background-color: #111;
+            font-family: sans-serif;
+        }
+        /* 上部のゲーム選択メニューバー */
+        #menu-bar {
+            width: 100%;
+            height: 50px;
+            background-color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            position: relative;
+            z-index: 10;
+        }
+        .game-btn {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .game-btn:hover {
+            background-color: #666;
+        }
+        .game-btn.active {
+            background-color: #007bff;
+            font-weight: bold;
+        }
+        /* ゲームを表示するエリア（メニューバーの残りの高さ全体） */
+        #game-container {
+            width: 100%;
+            height: calc(100% - 50px);
+            position: relative;
         }
         iframe {
             width: 100%;
             height: 100%;
             border: none;
+            background-color: #000;
         }
     </style>
 </head>
 <body>
-    <iframe src="/index.html"></iframe>
+
+    <div id="menu-bar">
+        <button class="game-btn active" onclick="switchGame('yohoho-io', this)">Yohoho.io</button>
+        <button class="game-btn" onclick="switchGame('poly-track', this)">Poly Track</button>
+        <button class="game-btn" onclick="switchGame('subway-hawaii', this)">Subway Surfers (Hawaii)</button>
+    </div>
+
+    <div id="game-container">
+        <iframe id="game-frame" src="/games/yohoho-io/index.html"></iframe>
+    </div>
+
+    <script>
+        function switchGame(gameKey, buttonElement) {
+            // iframeのsrcを切り替えてゲームを読み込む
+            const frame = document.getElementById('game-frame');
+            frame.src = `/games/${gameKey}/index.html`;
+
+            // ボタンのアクティブ状態（青色ハイライト）を切り替え
+            const buttons = document.querySelectorAll('.game-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            buttonElement.classList.add('active');
+        }
+    </script>
 </body>
 </html>
