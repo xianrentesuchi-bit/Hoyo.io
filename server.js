@@ -4,40 +4,47 @@ const path = require('path');
 const app = express();
 const router = express.Router();
 
-// 各ゲームのGitHub上のベースURLのマッピング
-const gameUrls = {
-    'yohoho-io': 'https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/yohoho-io',
-    'poly-track': 'https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/poly-track',
-    'subway-hawaii': 'https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/hawaii'
-};
-
-// メニュー画面（ルート）へのアクセスは、ローカルのpublic/index.htmlを返す
+// 静的ファイル（ゲーム選択画面のHTMLなど）を「public」フォルダから配信
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ゲーム名とGitHubのパスのマッピング設定
+const gamePaths = {
+    'yohoho-io': 'yohoho-io',
+    'poly-track': 'poly-track',
+    'subway-surfers': 'hawaii', // スブウェイランのパス
+    'table-tennis': 'table-tennis-world-tour' // 卓球のパス
+};
 
 // ゲームごとのリクエストを処理するルーティング
 router.get('/:game/:file(*)?', async (req, res) => {
-    const game = req.params.game;
-    const fileName = req.params.file || 'index.html';
+    const gameKey = req.params.game;
     
-    // 定義されていないゲーム名の場合は404
-    if (!gameUrls[game]) {
-        res.status(404).send('Game not found');
-        return;
+    // 登録されていないゲーム名、またはトップページのアクセスなら次に進む（静的HTMLを表示するため）
+    if (!gamePaths[gameKey]) {
+        return res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
 
-    // 選択されたゲームに応じたURLを構築
-    const targetUrl = `${gameUrls[game]}/${fileName}`;
+    // リクエストされたファイル名を取得（空ならindex.html）
+    const fileName = req.params.file || 'index.html';
+    
+    // 各ゲームに対応するGitHubのフォルダ名を取得
+    const githubFolder = gamePaths[gameKey];
+    
+    // GitHubのRawデータURLを構築
+    const targetUrl = `https://raw.githubusercontent.com/Gr4ys0n/Gr4ys0n.github.io/main/public/assets/games/${githubFolder}/${fileName}`;
 
     try {
         await stream(targetUrl, {
             method: 'GET',
             maxRedirections: 3,
         }, ({ statusCode, headers }) => {
+            // 200 OK 以外は404エラーとして返す
             if (statusCode !== 200) {
                 res.status(statusCode).send('Resource not found');
                 return;
             }
 
+            // 拡張子からContentTypeを判定
             let contentType = headers['content-type'];
             if (fileName === 'index.html' || fileName.endsWith('index.html')) {
                 contentType = 'text/html';
@@ -49,6 +56,7 @@ router.get('/:game/:file(*)?', async (req, res) => {
                 contentType = 'text/css';
             }
 
+            // ヘッダーの設定
             if (contentType) {
                 res.setHeader('Content-Type', contentType);
             }
@@ -64,8 +72,10 @@ router.get('/:game/:file(*)?', async (req, res) => {
     }
 });
 
-app.use('/games', router);
+// 作成したルーターを適用
+app.use('/', router);
 
+// サーバーをポート3000で起動
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
